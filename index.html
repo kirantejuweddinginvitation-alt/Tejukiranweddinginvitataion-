@@ -324,12 +324,7 @@ function loop(){px.clearRect(0,0,pc.width,pc.height);P.forEach(p=>{p.y+=p.v;p.w+
  if(p.y>pc.height+20)Object.assign(p,mk())});requestAnimationFrame(loop)}
 function burst(n){if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;for(let i=0;i<n;i++)P.push(mk(Math.random()*-pc.height));if(!on){on=true;loop()}}
 
-/* ===== Music =====
-   1) If C.song (song.mp3) exists next to this page, that Telugu song plays.
-   2) Otherwise a built-in Telugu wedding tune plays: nadaswaram-style melody in raga Mohanam
-      over a tanpura drone and a dolu/tavil-style rhythm (all generated in the browser). */
-
-/* ===== Background Music: audio.m4a ===== */
+/* ===== Background Music: play only audio.m4a ===== */
 const Music = (() => {
   const audio = new Audio("./audio.m4a");
   audio.loop = true;
@@ -338,11 +333,13 @@ const Music = (() => {
 
   function updateUI(playing) {
     button.classList.toggle("off", !playing);
-    button.setAttribute(
-      "aria-label",
-      playing ? "Pause music" : "Play music"
-    );
+    button.setAttribute("aria-label", playing ? "Pause music" : "Play music");
   }
+
+  audio.addEventListener("error", () => {
+    updateUI(false);
+    toast("Could not load audio.m4a. Keep it beside index.html.");
+  });
 
   async function play() {
     try {
@@ -350,7 +347,7 @@ const Music = (() => {
       updateUI(true);
     } catch (error) {
       updateUI(false);
-      toast("Please check that audio.m4a is in the same folder");
+      toast("Tap the music button to play audio.m4a");
     }
   }
 
@@ -360,11 +357,8 @@ const Music = (() => {
   }
 
   button.onclick = () => {
-    if (audio.paused) {
-      play();
-    } else {
-      stop();
-    }
+    if (audio.paused) play();
+    else stop();
   };
 
   document.addEventListener("visibilitychange", () => {
@@ -372,7 +366,7 @@ const Music = (() => {
       audio.pause();
       button.dataset.wasPlaying = "true";
       updateUI(false);
-    } else if (!document.hidden && button.dataset.wasPlaying) {
+    } else if (!document.hidden && button.dataset.wasPlaying === "true") {
       delete button.dataset.wasPlaying;
       play();
     }
@@ -385,52 +379,6 @@ const Music = (() => {
     }
   };
 })();
-
- /* Mohanam: S R2 G3 P D2 = 0 2 4 7 9 (+12) ; each phrase is 8 beats */
- const PH=[
-  [[4,1],[7,1],[9,1],[12,1],[9,.5],[7,.5],[9,1],[7,1],[4,1]],
-  [[12,1],[14,1],[16,1],[14,.5],[12,.5],[9,1],[7,1],[9,1],[7,1]],
-  [[4,1],[2,.5],[4,.5],[7,1],[4,1],[2,1],[0,1],[2,1],[4,1]],
-  [[7,1],[9,1],[12,1],[9,1],[7,1],[4,1],[2,.5],[0,.5],[0,1]]];
- const M={};let bt=0,pv=null;PH.forEach(p=>p.forEach(([n,d])=>{M[bt*2]={n,d,pv};pv=n;bt+=d}));const LOOP=bt*2;
- let ctx,out,nz,tm,nx=0,st=0,el,pl=false,synth=!C.song;const b=$("#mus");
- function init(){ctx=new AC();const comp=ctx.createDynamicsCompressor();comp.connect(ctx.destination);
-  out=ctx.createGain();out.gain.value=.8;out.connect(comp);
-  const d=ctx.createDelay(1),f=ctx.createGain(),w=ctx.createGain();d.delayTime.value=B*.75;f.gain.value=.32;w.gain.value=.3;
-  out.connect(d);d.connect(f);f.connect(d);d.connect(w);w.connect(comp);
-  nz=ctx.createBuffer(1,Math.floor(ctx.sampleRate*.2),ctx.sampleRate);const a=nz.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1}
- function reed(t,n,d,p){const f=mf(ROOT+n),len=d*B,g=ctx.createGain(),lp=ctx.createBiquadFilter(),lfo=ctx.createOscillator(),lg=ctx.createGain();
-  lp.type="lowpass";lp.frequency.value=2600;lp.Q.value=4;
-  lfo.frequency.value=5.2;lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(16,t+Math.min(.3,len));lfo.connect(lg);
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.11,t+.035);g.gain.setValueAtTime(.11,t+Math.max(.04,len-.1));g.gain.linearRampToValueAtTime(.0001,t+len+.04);
-  [-7,7].forEach(c=>{const o=ctx.createOscillator();o.type="sawtooth";o.detune.value=c;
-   if(p!==null&&p!==n&&Math.abs(p-n)<=5){o.frequency.setValueAtTime(mf(ROOT+p),t);o.frequency.exponentialRampToValueAtTime(f,t+.07)}else o.frequency.value=f;
-   lg.connect(o.detune);o.connect(lp);o.start(t);o.stop(t+len+.08)});
-  lfo.start(t);lfo.stop(t+len+.08);lp.connect(g);g.connect(out)}
- function pluck(t,n,v){const o=ctx.createOscillator(),lp=ctx.createBiquadFilter(),g=ctx.createGain();o.type="sawtooth";o.frequency.value=mf(n);
-  lp.type="lowpass";lp.frequency.setValueAtTime(1500,t);lp.frequency.exponentialRampToValueAtTime(300,t+1.6);
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+2.6);
-  o.connect(lp);lp.connect(g);g.connect(out);o.start(t);o.stop(t+2.7)}
- function boom(t,v){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(55,t+.15);
-  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+.35);o.connect(g);g.connect(out);o.start(t);o.stop(t+.4)}
- function tk(t,v){const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();s.buffer=nz;f.type="bandpass";f.frequency.value=2800;f.Q.value=1.5;
-  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+.06);s.connect(f);f.connect(g);g.connect(out);s.start(t);s.stop(t+.08)}
- function sch(){while(nx<ctx.currentTime+.5){const e=M[st%LOOP],p=st%16,k=st%8;
-  if(e)reed(nx,e.n,e.d,e.pv);
-  if(p==0||p==8)boom(nx,.34);if(p==6)boom(nx,.18);
-  if(p==2||p==4||p==10||p==12||p==14)tk(nx,.1);if(p==5||p==13)tk(nx,.05);
-  if(k==0)pluck(nx,ROOT-17,.05);if(k==2||k==4)pluck(nx,ROOT-12,.04);if(k==6)pluck(nx,ROOT-24,.06);
-  nx+=B/2;st++}}
- function startSynth(){if(!AC)return;if(!ctx)init();ctx.resume();nx=ctx.currentTime+.1;st=0;clearInterval(tm);tm=setInterval(sch,100);synth=true}
- function ui(){b.classList.toggle("off",!pl);b.setAttribute("aria-label",pl?"Pause music":"Play music")}
- function play(){pl=true;ui();
-  if(synth){startSynth();return}
-  el=el||Object.assign(new Audio(C.song),{loop:true,volume:.7});
-  const r=el.play();if(r&&r.catch)r.catch(e=>{if(e&&e.name==="NotAllowedError")return;el=null;if(pl)startSynth()})}
- function stop(){pl=false;ui();if(el)el.pause();clearInterval(tm);if(ctx)ctx.suspend()}
- b.onclick=()=>pl?stop():play();
- document.addEventListener("visibilitychange",()=>{if(document.hidden&&pl){stop();b.dataset.a=1}else if(!document.hidden&&b.dataset.a){delete b.dataset.a;play()}});
- return{start(){b.classList.add("show");play()}}})();
 $("#open").onclick=()=>{   $("#cover").classList.add("open");   document.body.classList.remove("lock");   P=[];   burst(34);   Music.start(); };
 
 /* scratch to reveal the date */
