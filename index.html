@@ -328,8 +328,64 @@ function burst(n){if(matchMedia("(prefers-reduced-motion:reduce)").matches)retur
    1) If C.song (song.mp3) exists next to this page, that Telugu song plays.
    2) Otherwise a built-in Telugu wedding tune plays: nadaswaram-style melody in raga Mohanam
       over a tanpura drone and a dolu/tavil-style rhythm (all generated in the browser). */
-const Music=(()=>{
- const AC=window.AudioContext||window.webkitAudioContext,BPM=96,B=60/BPM,ROOT=62,mf=n=>440*Math.pow(2,(n-69)/12);
+
+/* ===== Background Music: audio.m4a ===== */
+const Music = (() => {
+  const audio = new Audio("./audio.m4a");
+  audio.loop = true;
+  audio.volume = 0.7;
+  const button = $("#mus");
+
+  function updateUI(playing) {
+    button.classList.toggle("off", !playing);
+    button.setAttribute(
+      "aria-label",
+      playing ? "Pause music" : "Play music"
+    );
+  }
+
+  async function play() {
+    try {
+      await audio.play();
+      updateUI(true);
+    } catch (error) {
+      updateUI(false);
+      toast("Please check that audio.m4a is in the same folder");
+    }
+  }
+
+  function stop() {
+    audio.pause();
+    updateUI(false);
+  }
+
+  button.onclick = () => {
+    if (audio.paused) {
+      play();
+    } else {
+      stop();
+    }
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && !audio.paused) {
+      audio.pause();
+      button.dataset.wasPlaying = "true";
+      updateUI(false);
+    } else if (!document.hidden && button.dataset.wasPlaying) {
+      delete button.dataset.wasPlaying;
+      play();
+    }
+  });
+
+  return {
+    start() {
+      button.classList.add("show");
+      play();
+    }
+  };
+})();
+
  /* Mohanam: S R2 G3 P D2 = 0 2 4 7 9 (+12) ; each phrase is 8 beats */
  const PH=[
   [[4,1],[7,1],[9,1],[12,1],[9,.5],[7,.5],[9,1],[7,1],[4,1]],
